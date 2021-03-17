@@ -12,6 +12,7 @@ import (
 
 type Game struct {
 	crypto   crypto.Crypto
+	salt     []byte
 	winnings map[string]*Play
 }
 
@@ -20,10 +21,12 @@ type Play struct {
 	winnings uint
 }
 
-func New(current map[string]uint) *Game {
+func New(current map[string]uint, salt []byte, crypto crypto.Crypto) *Game {
 	// TODO: load winnings from file in io, add implementations for RNG &weight, tests for this package
 	g := &Game{
 		winnings: map[string]*Play{},
+		salt:     salt,
+		crypto:   crypto,
 	}
 	for k, v := range current {
 		g.winnings[k] = &Play{
