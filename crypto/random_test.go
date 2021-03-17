@@ -26,7 +26,7 @@ func TestRandomGeneration(t *testing.T) {
 	winnings := Weight(digest)
 
 	t.Logf("resultLookup: %v", resultLookup)
-	t.Logf("Salts: %v", salt)
+	t.Logf("Salt: %v", salt)
 	if winnings < 32 || winnings > 1024 {
 		t.Errorf("Winnings out of bound of 32 to 1024."+
 			"Winning value: %v", winnings)
