@@ -23,9 +23,9 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "registration",
-	Short: "Runs a registration server for cMix",
-	Long:  `This server provides registration functions on cMix`,
+	Use:   "xx-coin-game",
+	Short: "Runs the xx coin game",
+	Long:  `This binary provides a bot wrapping client`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 
