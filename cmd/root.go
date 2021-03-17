@@ -15,9 +15,13 @@ import (
 )
 
 var (
-	logPath  string
-	filePath string
-	logLevel uint
+	logPath      string
+	filePath     string
+	logLevel     uint
+	session      string
+	writeContact string
+	password     string
+	ndfPath      string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -63,6 +67,20 @@ func init() {
 
 	rootCmd.Flags().StringVarP(&logPath, "logPath", "l",
 		"-", "Sets the log file path")
+
+	rootCmd.Flags().StringVarP(&session, "session", "s",
+		"", "Sets the initial storage directory for "+
+			"client session data")
+
+	rootCmd.Flags().StringVarP(&writeContact, "writeContact", "w",
+		"-", "Write contact information, if any, to this file, "+
+			" defaults to stdout")
+
+	rootCmd.Flags().StringVarP(&password, "password", "p", "",
+		"Password to the session file")
+
+	rootCmd.Flags().StringVarP(&ndfPath, "ndf", "n", "ndf.json",
+		"Path to the network definition JSON file")
 }
 
 // initLog initializes logging thresholds and the log path.
