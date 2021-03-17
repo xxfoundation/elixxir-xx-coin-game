@@ -7,9 +7,9 @@ import (
 )
 
 var resultLookup []uint
-var salt []byte
+var Salt []byte
 
-func InitCrypto() {
+func Init() {
 	resultLookup = make([]uint, 1000)
 
 	base := 5
@@ -26,12 +26,12 @@ func InitCrypto() {
 		resultLookup[entree] = 32
 	}
 
-	salt = make([]byte, 32)
-	_, err := csprng.NewSystemRNG().Read(salt)
+	Salt = make([]byte, 32)
+	_, err := csprng.NewSystemRNG().Read(Salt)
 	if err != nil {
 		jww.FATAL.Panicf(err.Error())
 	}
 
-	jww.INFO.Printf("Pre-committed output with message \"test\": %v", Weight(RandomGeneration("test", salt)))
+	jww.INFO.Printf("Pre-committed output with message \"test\": %v", Weight(RandomGeneration("test", Salt)))
 
 }

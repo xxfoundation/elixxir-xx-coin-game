@@ -16,6 +16,5 @@ func Weight(digest []byte) uint {
 	mod := big.NewInt(1000)
 	data.Mod(data, mod)
 
-
 	return resultLookup[data.Uint64()]
 }

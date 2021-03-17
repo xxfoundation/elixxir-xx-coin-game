@@ -11,12 +11,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	InitCrypto()
+	Init()
 	os.Exit(m.Run())
 }
 
 func TestRandomGeneration(t *testing.T) {
-	digest := RandomGeneration("test", salt)
+	digest := RandomGeneration("test", Salt)
 
 	if len(digest) != 32 {
 		t.Errorf("RandomGeneration did not output a digest against the spec."+
@@ -26,7 +26,7 @@ func TestRandomGeneration(t *testing.T) {
 	winnings := Weight(digest)
 
 	t.Logf("resultLookup: %v", resultLookup)
-	t.Logf("Salt: %v", salt)
+	t.Logf("Salt: %v", Salt)
 	if winnings < 32 || winnings > 1024 {
 		t.Errorf("Winnings out of bound of 32 to 1024."+
 			"Winning value: %v", winnings)
