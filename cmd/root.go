@@ -19,10 +19,12 @@ import (
 	"gitlab.com/elixxir/client/interfaces/params"
 	"gitlab.com/elixxir/client/single"
 	"gitlab.com/elixxir/client/switchboard"
+	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"gitlab.com/elixxir/xx-coin-game/game"
+	"gitlab.com/elixxir/xx-coin-game/io"
 	"io/ioutil"
 	"os"
 	"time"
-	"gitlab.com/elixxir/xx-coin-game/io"
 )
 
 var (
@@ -45,7 +47,9 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Main program initialization here
-		_, _ = io.StartIo(filePath)
+		addressMap, addressWriteCh := io.StartIo(filePath)
+
+		gameMap := game.New(addressMap, salt, crypto.NewRng())
 
 		client := initClient()
 
@@ -90,54 +94,61 @@ var rootCmd = &cobra.Command{
 		singleMng := single.NewManager(client)
 
 		// Register the callback
-		callbackChan := make(chan responseCallbackChan)
+
 		callback := func(payload []byte, c single.Contact) {
-			callbackChan <- responseCallbackChan{payload, c}
+			if payload == nil {
+				jww.WARN.Printf("Empty payload from %s",
+					c.GetPartner())
+				return
+			}
+
+			//process the message
+			address, text, err := crypto.HandleMessage(string(payload))
+			if err != nil {
+				jww.WARN.Printf("Payload %s from %s failed handling: %s",
+					string(payload), c.GetPartner(), err.Error())
+				err := singleMng.RespondSingleUse(c, []byte(err.Error()), 30*time.Second)
+				if err != nil {
+					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
+						c.GetPartner(), err)
+				}
+			}
+
+			new, value, err := gameMap.Play(address, string(payload))
+
+			if err != nil {
+				jww.WARN.Printf("Address %s from %s could nto be found: %s",
+					address, c.GetPartner(), err.Error())
+				err = singleMng.RespondSingleUse(c, []byte(err.Error()), 30*time.Second)
+				if err != nil {
+					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
+						c.GetPartner(), err)
+				}
+			}
+
+			message := fmt.Sprintf("Address %s said %s and won %d xx coins!", address, text, value)
+
+			if new {
+				addressWriteCh <- io.AddressUpdate{
+					Address: address,
+					Value:   uint64(value),
+				}
+				jww.INFO.Println(message)
+			}
+
+			err = singleMng.RespondSingleUse(c, []byte(message), 30*time.Second)
+			if err != nil {
+				jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
+					c.GetPartner(), err)
+			}
 		}
-		singleMng.RegisterCallback("tag", callback)
+		singleMng.RegisterCallback("xxCoinGame", callback)
 		client.AddService(singleMng.StartProcesses)
 
 		// Wait to receive a message or stop after timeout occurs
 		fmt.Println("Bot Started...")
-		for {
-			processMessage(singleMng, callbackChan)
-		}
+		select {}
 	},
-}
-
-func processMessage(m *single.Manager, callbackChan chan responseCallbackChan) {
-	timeout := 90 * time.Second
-	timer := time.NewTimer(10 * time.Second)
-	select {
-	case results := <-callbackChan:
-		if results.payload == nil {
-			jww.WARN.Printf("Empty payload from %s",
-				results.c.GetPartner())
-			break
-		}
-		fmt.Printf("Transmission received: %s\n", results.payload)
-		jww.DEBUG.Printf("Received single-use transmission from %s: %s",
-			results.c.GetPartner(), results.payload)
-
-		// Create new payload from repeated received payloads so that each
-		// message part contains the same payload
-		payload := makeResponsePayload(m, results.payload,
-			results.c.GetMaxParts())
-
-		// TODO: This should be a queue, separate thread that continues
-		// trying forever until success.
-		fmt.Printf("response message: %s\n", payload)
-		jww.DEBUG.Printf("Sending response to %s: %s",
-			results.c.GetPartner(), payload)
-		err := m.RespondSingleUse(results.c, payload, timeout)
-		if err != nil {
-			jww.WARN.Panicf("Failed to send response: %+v", err)
-		}
-
-	case <-timer.C:
-		// TODO: Maybe print metrics?
-		jww.INFO.Printf("No messages to process, still alive...")
-	}
 }
 
 // Execute adds all child commands to the root command and sets flags
@@ -185,7 +196,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&ndfPath, "ndf", "n", "ndf.json",
 		"Path to the network definition JSON file")
 
-	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte,32), "Default value of salt")
+	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte, 32), "Default value of salt")
 }
 
 // initLog initializes logging thresholds and the log path.
