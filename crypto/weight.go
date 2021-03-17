@@ -49,7 +49,7 @@ func Weight(digest []byte) uint {
 		winnings = ThirdWinnings
 	} else if between(FourthWinningThreshold, ThirdWinningThreshold, winnings) {
 		winnings = FourthWinnings
-	} else if between(FifthWinningThreshold, FourthWinningThreshold, winnings){
+	} else if between(FifthWinningThreshold, FourthWinningThreshold, winnings) {
 		winnings = FifthWinnings
 	} else if between(HighestWinningThreshold, FifthWinningThreshold, winnings) {
 		winnings = HighestWinnings
@@ -58,6 +58,8 @@ func Weight(digest []byte) uint {
 	return uint(winnings)
 }
 
+// Determines if value is strictly greater than min
+// and less than or equal to max value
 func between(min, max, value uint64) bool {
 	return value > min && value <= max
 }
