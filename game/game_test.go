@@ -1,6 +1,9 @@
 package game
 
-import "testing"
+import (
+	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"testing"
+)
 
 func TestNew(t *testing.T) {
 	g := New(map[string]uint{"t1": 0, "t2": 0, "t3": 3}, []byte("salt"), nil)
@@ -10,7 +13,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestGame_Play(t *testing.T) {
-	g := New(map[string]uint{"t1": 0, "t2": 0, "t3": 3}, []byte("salt"), nil)
+	g := New(map[string]uint{"t1": 0, "t2": 0, "t3": 3}, []byte("salt"), crypto.NewRng())
 	ok, _ := g.Play("addr", "i'm a message")
 	if ok {
 		t.Error("Should not have been able to play with unknown address")
