@@ -42,15 +42,15 @@ func (g *Game) Play(address, message string) (bool, uint) {
 	if !ok {
 		return false, 0
 	}
-	return p.play(message, g.crypto)
+	return p.play(message, g.crypto, g.salt)
 }
 
-func (p *Play) play(message string, crypto crypto.Crypto) (bool, uint) {
+func (p *Play) play(message string, crypto crypto.Crypto, salt []byte) (bool, uint) {
 	p.Lock()
 	defer p.Unlock()
 
 	if p.winnings == 0 {
-		digest := crypto.RandomGeneration(message)
+		digest := crypto.RandomGeneration(message, salt)
 		weight := crypto.Weight(digest)
 		p.winnings = weight
 		return true, p.winnings
