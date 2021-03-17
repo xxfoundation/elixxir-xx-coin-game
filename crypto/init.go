@@ -17,7 +17,7 @@ func InitCrypto() {
 	entree := 0
 	for i := 0; i < 6; i++ {
 		coinValue := math.Pow(2, float64(i+base))
-		lastEntree := entree + int(1/(math.Pow(2, float64(1+i))))
+		lastEntree := (entree + 1)/int((math.Pow(2, float64(1+i))))
 		for ; entree <= lastEntree; entree++ {
 			resultLookup[entree] = uint(coinValue)
 		}
