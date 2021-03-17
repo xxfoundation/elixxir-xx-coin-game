@@ -9,3 +9,9 @@ type Crypto interface {
 	RandomGeneration(message string, salt []byte) []byte
 	Weight(digest []byte) uint
 }
+
+type Rng struct {}
+
+func NewRng() *Rng  {
+	return &Rng{}
+}

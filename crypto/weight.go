@@ -10,7 +10,7 @@ import (
 )
 
 // Weights the random value to determine the winnings
-func Weight(digest []byte) uint {
+func (rng *Rng) Weight(digest []byte) uint {
 	data := big.NewInt(1)
 	data.SetBytes(digest)
 	mod := big.NewInt(1000)
