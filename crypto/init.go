@@ -32,6 +32,7 @@ func Init() {
 		jww.FATAL.Panicf(err.Error())
 	}
 
-	jww.INFO.Printf("Pre-committed output with message \"test\": %v", Weight(RandomGeneration("test", Salt)))
+	jww.INFO.Printf("Pre-committed output with message \"test\": %v",
+		Weight(RandomGeneration("test", Salt)))
 
 }
