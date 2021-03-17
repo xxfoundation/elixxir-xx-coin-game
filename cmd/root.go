@@ -27,13 +27,14 @@ import (
 )
 
 var (
-	logPath     string
-	filePath    string
-	logLevel    uint
-	session     string
-	contactPath string
-	password    string
-	ndfPath     string
+	logPath      string
+	filePath     string
+	logLevel     uint
+	session      string
+	writeContact string
+	password     string
+	ndfPath      string
+	salt         []byte
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -158,7 +159,7 @@ func init() {
 	// here, and ensure all the Flags are of the *P variety, unless there's a
 	// very good reason not to have them as local params to sub command."
 	cobra.OnInitialize(initLog)
-	crypto.Init()
+
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
@@ -184,6 +185,8 @@ func init() {
 
 	rootCmd.Flags().StringVarP(&ndfPath, "ndf", "n", "ndf.json",
 		"Path to the network definition JSON file")
+
+	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte,32), "Default value of salt")
 }
 
 // initLog initializes logging thresholds and the log path.
