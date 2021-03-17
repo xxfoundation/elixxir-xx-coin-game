@@ -5,17 +5,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 package game
 
-import "sync"
-
-type randomizer interface {
-	RandomGeneration(message string, salt []byte) []byte
-	Weight(digest []byte) uint
-}
-type RandomGeneration func(message string) []byte
-type Weight func(digest []byte) uint
+import (
+	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"sync"
+)
 
 type Game struct {
-	rand     randomizer
+	crypto   crypto.Crypto
 	winnings map[string]*Play
 }
 
@@ -43,16 +39,16 @@ func (g *Game) Play(address, message string) (bool, uint) {
 	if !ok {
 		return false, 0
 	}
-	return p.play(message, g.rand)
+	return p.play(message, g.crypto)
 }
 
-func (p *Play) play(message string, rng randomizer) (bool, uint) {
+func (p *Play) play(message string, crypto crypto.Crypto) (bool, uint) {
 	p.Lock()
 	defer p.Unlock()
 
 	if p.winnings == 0 {
-		digest := rng.RandomGeneration(message, []byte("salt"))
-		weight := rng.Weight(digest)
+		digest := crypto.RandomGeneration(message)
+		weight := crypto.Weight(digest)
 		p.winnings = weight
 		return true, p.winnings
 	}
