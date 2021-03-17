@@ -7,13 +7,16 @@ package game
 
 import "sync"
 
+type randomizer interface {
+	RandomGeneration(message string, salt []byte) []byte
+	Weight(digest []byte) uint
+}
 type RandomGeneration func(message string) []byte
 type Weight func(digest []byte) uint
 
 type Game struct {
-	rngFunc    RandomGeneration
-	weightFunc Weight
-	winnings   map[string]*Play
+	rand     randomizer
+	winnings map[string]*Play
 }
 
 type Play struct {
@@ -21,34 +24,35 @@ type Play struct {
 	winnings uint
 }
 
-func New() *Game {
+func New(current map[string]uint) *Game {
 	// TODO: load winnings from file in io, add implementations for RNG &weight, tests for this package
-	return &Game{
-		rngFunc:    nil,
-		weightFunc: nil,
-		winnings:   map[string]*Play{},
+	g := &Game{
+		winnings: map[string]*Play{},
 	}
+	for k, v := range current {
+		g.winnings[k] = &Play{
+			Mutex:    sync.Mutex{},
+			winnings: v,
+		}
+	}
+	return g
 }
 
 func (g *Game) Play(address, message string) (bool, uint) {
 	p, ok := g.winnings[address]
 	if !ok {
-		g.winnings[address] = &Play{
-			Mutex:    sync.Mutex{},
-			winnings: 0,
-		}
-		p = g.winnings[address]
+		return false, 0
 	}
-	return p.play(message, g.rngFunc, g.weightFunc)
+	return p.play(message, g.rand)
 }
 
-func (p *Play) play(message string, rngFunc RandomGeneration, weightFunc Weight) (bool, uint) {
+func (p *Play) play(message string, rng randomizer) (bool, uint) {
 	p.Lock()
 	defer p.Unlock()
 
 	if p.winnings == 0 {
-		digest := rngFunc(message)
-		weight := weightFunc(digest)
+		digest := rng.RandomGeneration(message, []byte("salt"))
+		weight := rng.Weight(digest)
 		p.winnings = weight
 		return true, p.winnings
 	}
