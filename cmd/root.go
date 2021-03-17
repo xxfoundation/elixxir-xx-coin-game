@@ -126,7 +126,7 @@ var rootCmd = &cobra.Command{
 				}
 			}
 
-			message := fmt.Sprintf("Address %s said %s and won %d xx coins!", address, text, value)
+			message := fmt.Sprintf("Address %s said \"%s\" and won %d xx coins!", address, text, value)
 
 			if new {
 				addressWriteCh <- io.AddressUpdate{
