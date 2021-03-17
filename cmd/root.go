@@ -47,8 +47,6 @@ var rootCmd = &cobra.Command{
 		// Main program initialization here
 		_, _ = io.StartIo(filePath)
 
-		ReadAddresses(filePath)
-
 		client := initClient()
 
 		// Write user contact to file
