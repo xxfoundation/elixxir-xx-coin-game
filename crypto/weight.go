@@ -5,7 +5,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 package crypto
 
-type Crypto interface {
-	RandomGeneration(message string, salt []byte) []byte
-	Weight(digest []byte) uint
+import (
+	"math/big"
+)
+
+// Weights the random value to determine the winnings
+func Weight(digest []byte) uint {
+	data := big.NewInt(1)
+	data.SetBytes(digest)
+	mod := big.NewInt(1000)
+	data.Mod(data, mod)
+
+	return resultLookup[data.Uint64()]
 }
