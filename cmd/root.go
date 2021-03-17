@@ -49,8 +49,12 @@ var rootCmd = &cobra.Command{
 		// Main program initialization here
 		addressMap, addressWriteCh := io.StartIo(filePath)
 
-		gameMap := game.New(addressMap, salt, crypto.NewRng())
+		newCrypto := crypto.NewRng()
+		gameMap := game.New(addressMap, salt, newCrypto)
 
+		// Print out the pre-committed value
+		jww.INFO.Print("Pre-committed winnings with message \"test\"",
+			newCrypto.Weight(newCrypto.RandomGeneration("test", salt)))
 		client := initClient()
 
 		// Write user contact to file
