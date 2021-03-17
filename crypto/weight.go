@@ -6,16 +6,15 @@
 package crypto
 
 import (
-	"crypto/sha256"
+	"math/big"
 )
 
-func (rng *Rng) RandomGeneration(message string, salt []byte) []byte {
-	// Generate hash
-	h := sha256.New()
+// Weights the random value to determine the winnings
+func (rng *Rng) Weight(digest []byte) uint {
+	data := big.NewInt(1)
+	data.SetBytes(digest)
+	mod := big.NewInt(1000)
+	data.Mod(data, mod)
 
-	h.Write([]byte(message))
-	h.Write(salt)
-
-	// Return a 256 bit digest
-	return h.Sum(nil)[:32]
+	return resultLookup[data.Uint64()]
 }

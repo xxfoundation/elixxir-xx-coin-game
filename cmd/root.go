@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"gitlab.com/elixxir/xx-coin-game/io"
 )
 
 var (
@@ -43,6 +45,8 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Main program initialization here
+		_, _ = io.StartIo(filePath)
+
 		ReadAddresses(filePath)
 
 		client := initClient()
@@ -156,7 +160,7 @@ func init() {
 	// here, and ensure all the Flags are of the *P variety, unless there's a
 	// very good reason not to have them as local params to sub command."
 	cobra.OnInitialize(initLog)
-
+	crypto.Init()
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
