@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"gitlab.com/elixxir/xx-coin-game/io"
 	"os"
 )
 
@@ -34,7 +35,9 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Main program initialization here
-		ReadAddresses(filePath)
+		_, _ = io.StartIo(filePath)
+
+		select {}
 	},
 }
 
