@@ -11,6 +11,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+	"gitlab.com/elixxir/xx-coin-game/crypto"
 	"gitlab.com/elixxir/xx-coin-game/io"
 	"os"
 )
@@ -58,7 +59,7 @@ func init() {
 	// here, and ensure all the Flags are of the *P variety, unless there's a
 	// very good reason not to have them as local params to sub command."
 	cobra.OnInitialize(initLog)
-
+	crypto.Init()
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
