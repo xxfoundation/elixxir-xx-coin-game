@@ -13,7 +13,7 @@ func Init() {
 	resultLookup = make([]uint, 1000)
 
 	base := 5
-
+	rng := NewRng()
 	entree := 0
 	for i := 0; i < 6; i++ {
 		coinValue := math.Pow(2, float64(i+base))
@@ -33,6 +33,6 @@ func Init() {
 	}
 
 	jww.INFO.Printf("Pre-committed output with message \"test\": %v",
-		Weight(RandomGeneration("test", Salt)))
+		rng.Weight(rng.RandomGeneration("test", Salt)))
 
 }
