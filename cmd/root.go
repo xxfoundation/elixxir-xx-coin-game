@@ -11,7 +11,6 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-	"github.com/spf13/viper"
 	"os"
 )
 
@@ -68,11 +67,10 @@ func init() {
 
 // initLog initializes logging thresholds and the log path.
 func initLog() {
-	if viper.Get("logPath") != nil {
-		vipLogLevel := viper.GetUint("logLevel")
+	if len(logPath) > 0 {
 
 		// Check the level of logs to display
-		if vipLogLevel > 1 {
+		if logLevel > 1 {
 			// Set the GRPC log level
 			err := os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info")
 			if err != nil {
@@ -86,7 +84,7 @@ func initLog() {
 			// Turn on trace logs
 			jww.SetLogThreshold(jww.LevelTrace)
 			jww.SetStdoutThreshold(jww.LevelTrace)
-		} else if vipLogLevel == 1 {
+		} else if logLevel == 1 {
 			// Turn on debugging logs
 			jww.SetLogThreshold(jww.LevelDebug)
 			jww.SetStdoutThreshold(jww.LevelDebug)
@@ -97,7 +95,6 @@ func initLog() {
 		}
 
 		// Create log file, overwrites if existing
-		logPath := viper.GetString("logPath")
 		logFile, err := os.OpenFile(logPath,
 			os.O_CREATE|os.O_WRONLY|os.O_APPEND,
 			0644)
