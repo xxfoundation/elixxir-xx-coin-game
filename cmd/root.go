@@ -21,10 +21,10 @@ import (
 	"gitlab.com/elixxir/client/switchboard"
 	"gitlab.com/elixxir/xx-coin-game/crypto"
 	"gitlab.com/elixxir/xx-coin-game/game"
+	"gitlab.com/elixxir/xx-coin-game/io"
 	"io/ioutil"
 	"os"
 	"time"
-	"gitlab.com/elixxir/xx-coin-game/io"
 )
 
 var (
@@ -50,8 +50,6 @@ var rootCmd = &cobra.Command{
 		addressMap, addressWriteCh := io.StartIo(filePath)
 
 		gameMap := game.New(addressMap, salt, crypto.NewRng())
-
-
 
 		client := initClient()
 
@@ -106,32 +104,31 @@ var rootCmd = &cobra.Command{
 
 			//process the message
 			address, text, err := crypto.HandleMessage(string(payload))
-			if err!=nil{
+			if err != nil {
 				jww.WARN.Printf("Payload %s from %s failed handling: %s",
 					string(payload), c.GetPartner(), err.Error())
 				err := singleMng.RespondSingleUse(c, []byte(err.Error()), 30*time.Second)
-				if err!=nil{
+				if err != nil {
 					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
 						c.GetPartner(), err)
 				}
 			}
-
 
 			new, value, err := gameMap.Play(address, string(payload))
 
-			if err!=nil{
+			if err != nil {
 				jww.WARN.Printf("Address %s from %s could nto be found: %s",
 					address, c.GetPartner(), err.Error())
 				err = singleMng.RespondSingleUse(c, []byte(err.Error()), 30*time.Second)
-				if err!=nil{
+				if err != nil {
 					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
 						c.GetPartner(), err)
 				}
 			}
 
-			message := fmt.Sprintf("Address %s said %s and won %s xx coins!", address, text, value)
+			message := fmt.Sprintf("Address %s said %s and won %d xx coins!", address, text, value)
 
-			if new{
+			if new {
 				addressWriteCh <- io.AddressUpdate{
 					Address: address,
 					Value:   uint64(value),
@@ -139,9 +136,8 @@ var rootCmd = &cobra.Command{
 				jww.INFO.Println(message)
 			}
 
-
 			err = singleMng.RespondSingleUse(c, []byte(message), 30*time.Second)
-			if err!=nil{
+			if err != nil {
 				jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
 					c.GetPartner(), err)
 			}
@@ -151,10 +147,9 @@ var rootCmd = &cobra.Command{
 
 		// Wait to receive a message or stop after timeout occurs
 		fmt.Println("Bot Started...")
-		select{}
+		select {}
 	},
 }
-
 
 // Execute adds all child commands to the root command and sets flags
 // appropriately.  This is called by main.main(). It only needs to
@@ -201,7 +196,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&ndfPath, "ndf", "n", "ndf.json",
 		"Path to the network definition JSON file")
 
-	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte,32), "Default value of salt")
+	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte, 32), "Default value of salt")
 }
 
 // initLog initializes logging thresholds and the log path.
