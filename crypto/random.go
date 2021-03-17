@@ -9,7 +9,7 @@ import (
 	"crypto/sha256"
 )
 
-func RandomGeneration(message string, salt []byte) []byte {
+func (rng *Rng) RandomGeneration(message string, salt []byte) []byte {
 	// Generate hash
 	h := sha256.New()
 
