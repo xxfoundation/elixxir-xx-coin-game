@@ -22,19 +22,18 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
-	"gitlab.com/elixxir/xx-coin-game/crypto"
 	"gitlab.com/elixxir/xx-coin-game/io"
 )
 
 var (
-	logPath      string
-	filePath     string
-	logLevel     uint
-	session      string
-	writeContact string
-	password     string
-	ndfPath      string
-	salt         []byte
+	logPath     string
+	filePath    string
+	logLevel    uint
+	session     string
+	contactPath string
+	password    string
+	ndfPath     string
+	salt        []byte
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -176,7 +175,7 @@ func init() {
 		"", "Sets the initial storage directory for "+
 			"client session data")
 
-	rootCmd.Flags().StringVarP(&contactPath, "writeContact", "w",
+	rootCmd.Flags().StringVarP(&contactPath, "contactPath", "w",
 		"-", "Write contact information, if any, to this file, "+
 			" defaults to stdout")
 
