@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"github.com/pkg/errors"
 	jww "github.com/spf13/jwalterweatherman"
 	"gitlab.com/xx_network/crypto/csprng"
 	"math"
@@ -31,5 +32,7 @@ func InitCrypto() {
 	if err != nil {
 		jww.FATAL.Panicf(err.Error())
 	}
+
+	jww.INFO.Print("Pre-committed output with message \"test\": %d", Weight(RandomGeneration("test", salt)))
 
 }
