@@ -9,21 +9,31 @@
 package cmd
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-	"gitlab.com/elixxir/xx-coin-game/io"
+	"gitlab.com/elixxir/client/api"
+	"gitlab.com/elixxir/client/interfaces/contact"
+	"gitlab.com/elixxir/client/interfaces/message"
+	"gitlab.com/elixxir/client/interfaces/params"
+	"gitlab.com/elixxir/client/single"
+	"gitlab.com/elixxir/client/switchboard"
+	"io/ioutil"
 	"os"
+	"time"
+	"gitlab.com/elixxir/xx-coin-game/io"
 )
 
 var (
-	logPath      string
-	filePath     string
-	logLevel     uint
-	session      string
-	writeContact string
-	password     string
-	ndfPath      string
-	salt         []byte
+	logPath     string
+	filePath    string
+	logLevel    uint
+	session     string
+	contactPath string
+	password    string
+	ndfPath     string
+	salt        []byte
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -37,8 +47,97 @@ var rootCmd = &cobra.Command{
 		// Main program initialization here
 		_, _ = io.StartIo(filePath)
 
-		select {}
+		client := initClient()
+
+		// Write user contact to file
+		user := client.GetUser()
+		jww.INFO.Printf("User: %s", user.ReceptionID)
+		jww.INFO.Printf("User Transmission: %s", user.TransmissionID)
+		writeContact(user.GetContact())
+
+		// Set up reception handler
+		swBoard := client.GetSwitchboard()
+		recvCh := make(chan message.Receive, 10000)
+		listenerID := swBoard.RegisterChannel("DefaultCLIReceiver",
+			switchboard.AnyUser(), message.Text, recvCh)
+		jww.INFO.Printf("Message ListenerID: %v", listenerID)
+
+		// Set up auth request handler, which simply prints the user ID of the
+		// requester
+		//authMgr := client.GetAuthRegistrar()
+
+		// NOTE: We would only need this to support E2E messages.
+		// authMgr.AddGeneralRequestCallback(func(
+		// 	requester contact.Contact, message string) {
+		// 		jww.INFO.Printf("Got request: %s", requester.ID)
+		// 		err := client.ConfirmAuthenticatedChannel(requester)
+		// 		if err != nil {
+		// 			jww.FATAL.Panicf("%+v", err)
+		// 		}
+		// 	})
+
+		_, err := client.StartNetworkFollower()
+		if err != nil {
+			jww.FATAL.Panicf("%+v", err)
+		}
+
+		// Wait until connected or crash on timeout
+		connected := make(chan bool, 10)
+		client.GetHealth().AddChannel(connected)
+		waitUntilConnected(connected)
+
+		// Make single-use manager and start receiving process
+		singleMng := single.NewManager(client)
+
+		// Register the callback
+		callbackChan := make(chan responseCallbackChan)
+		callback := func(payload []byte, c single.Contact) {
+			callbackChan <- responseCallbackChan{payload, c}
+		}
+		singleMng.RegisterCallback("tag", callback)
+		client.AddService(singleMng.StartProcesses)
+
+		// Wait to receive a message or stop after timeout occurs
+		fmt.Println("Bot Started...")
+		for {
+			processMessage(singleMng, callbackChan)
+		}
 	},
+}
+
+func processMessage(m *single.Manager, callbackChan chan responseCallbackChan) {
+	timeout := 90 * time.Second
+	timer := time.NewTimer(10 * time.Second)
+	select {
+	case results := <-callbackChan:
+		if results.payload == nil {
+			jww.WARN.Printf("Empty payload from %s",
+				results.c.GetPartner())
+			break
+		}
+		fmt.Printf("Transmission received: %s\n", results.payload)
+		jww.DEBUG.Printf("Received single-use transmission from %s: %s",
+			results.c.GetPartner(), results.payload)
+
+		// Create new payload from repeated received payloads so that each
+		// message part contains the same payload
+		payload := makeResponsePayload(m, results.payload,
+			results.c.GetMaxParts())
+
+		// TODO: This should be a queue, separate thread that continues
+		// trying forever until success.
+		fmt.Printf("response message: %s\n", payload)
+		jww.DEBUG.Printf("Sending response to %s: %s",
+			results.c.GetPartner(), payload)
+		err := m.RespondSingleUse(results.c, payload, timeout)
+		if err != nil {
+			jww.WARN.Panicf("Failed to send response: %+v", err)
+		}
+
+	case <-timer.C:
+		// TODO: Maybe print metrics?
+		jww.INFO.Printf("No messages to process, still alive...")
+	}
 }
 
 // Execute adds all child commands to the root command and sets flags
@@ -76,7 +175,7 @@ func init() {
 		"", "Sets the initial storage directory for "+
 			"client session data")
 
-	rootCmd.Flags().StringVarP(&writeContact, "writeContact", "w",
+	rootCmd.Flags().StringVarP(&contactPath, "contactPath", "w",
 		"-", "Write contact information, if any, to this file, "+
 			" defaults to stdout")
 
@@ -128,4 +227,123 @@ func initLog() {
 			jww.SetLogOutput(logFile)
 		}
 	}
+}
+
+func createClient() *api.Client {
+	pass := password
+	storeDir := session
+
+	//create a new client if none exist
+	if _, err := os.Stat(storeDir); os.IsNotExist(err) {
+		// Load NDF
+		ndfJSON, err := ioutil.ReadFile(ndfPath)
+		if err != nil {
+			jww.FATAL.Panicf(err.Error())
+		}
+
+		err = api.NewClient(string(ndfJSON), storeDir,
+			[]byte(pass), "")
+		if err != nil {
+			jww.FATAL.Panicf("%+v", err)
+		}
+	}
+
+	netParams := params.GetDefaultNetwork()
+	client, err := api.OpenClient(storeDir, []byte(pass), netParams)
+	if err != nil {
+		jww.FATAL.Panicf("%+v", err)
+	}
+	return client
+}
+
+func initClient() *api.Client {
+	createClient()
+
+	pass := password
+	storeDir := session
+
+	netParams := params.GetDefaultNetwork()
+	client, err := api.Login(storeDir, []byte(pass), netParams)
+	if err != nil {
+		jww.FATAL.Panicf("%+v", err)
+	}
+
+	return client
+}
+
+func writeContact(c contact.Contact) {
+	outfilePath := contactPath
+	if outfilePath == "" {
+		return
+	}
+	err := ioutil.WriteFile(outfilePath, c.Marshal(), 0644)
+	if err != nil {
+		jww.FATAL.Panicf("%+v", err)
+	}
+}
+
+func waitUntilConnected(connected chan bool) {
+	timeoutTimer := time.NewTimer(90 * time.Second)
+	isConnected := false
+	//Wait until we connect or panic if we can't by a timeout
+	for !isConnected {
+		select {
+		case isConnected = <-connected:
+			jww.INFO.Printf("Network Status: %v\n",
+				isConnected)
+			break
+		case <-timeoutTimer.C:
+			jww.FATAL.Panic("timeout on connection")
+		}
+	}
+
+	// Now start a thread to empty this channel and update us
+	// on connection changes for debugging purposes.
+	go func() {
+		prev := true
+		for {
+			select {
+			case isConnected = <-connected:
+				if isConnected != prev {
+					prev = isConnected
+					jww.INFO.Printf(
+						"Network Status Changed: %v\n",
+						isConnected)
+				}
+				break
+			}
+		}
+	}()
+}
+
+// responseCallbackChan structure used to collect information sent to the
+// response callback.
+type responseCallbackChan struct {
+	payload []byte
+	c       single.Contact
+}
+
+// makeResponsePayload generates a new payload that will span the max number of
+// message parts in the contact. Each resulting message payload will contain a
+// copy of the supplied payload with spaces taking up any remaining data.
+func makeResponsePayload(m *single.Manager, payload []byte, maxParts uint8) []byte {
+	payloads := make([][]byte, maxParts)
+	payloadPart := makeResponsePayloadPart(m, payload)
+	for i := range payloads {
+		payloads[i] = make([]byte, m.GetMaxResponsePayloadSize())
+		copy(payloads[i], payloadPart)
+	}
+	return bytes.Join(payloads, []byte{})
+}
+
+// makeResponsePayloadPart creates a single response payload by coping the given
+// payload and filling the rest with spaces.
+func makeResponsePayloadPart(m *single.Manager, payload []byte) []byte {
+	payloadPart := make([]byte, m.GetMaxResponsePayloadSize())
+	for i := range payloadPart {
+		payloadPart[i] = ' '
+	}
+	copy(payloadPart, payload)
+
+	return payloadPart
 }
