@@ -8,14 +8,8 @@ package crypto
 import (
 	jww "github.com/spf13/jwalterweatherman"
 	"gitlab.com/xx_network/crypto/csprng"
-	"os"
 	"testing"
 )
-
-func TestMain(m *testing.M) {
-	Init()
-	os.Exit(m.Run())
-}
 
 func TestRandomGeneration(t *testing.T) {
 	rng := NewRng()
