@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type AddressUpdate struct {
@@ -49,6 +50,8 @@ func StartIo(path string) (map[string]uint64, chan AddressUpdate) {
 		if len(record) != 2 {
 			jww.FATAL.Panicf("Line is formatted incorrectly: %v", record)
 		}
+
+		record[0] = strings.ToLower(record[0])
 		jww.DEBUG.Printf("Reading record %d: [Address: %s Amount: %s]", i, record[0], record[1])
 		addressMap[record[0]], err = strconv.ParseUint(record[1], 10, 64)
 		if err != nil {
