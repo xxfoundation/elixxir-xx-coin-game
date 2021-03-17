@@ -33,7 +33,10 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Main program initialization here
-		ReadAddresses(filePath)
+		addresses := readAddresses(filePath)
+
+		// Infinite loop, start last and will keep program alive
+		addresses.writeAddresses(filePath)
 	},
 }
 
