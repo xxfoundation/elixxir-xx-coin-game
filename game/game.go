@@ -6,6 +6,7 @@
 package game
 
 import (
+	"github.com/pkg/errors"
 	"gitlab.com/elixxir/xx-coin-game/crypto"
 	"sync"
 )
@@ -21,7 +22,7 @@ type Play struct {
 	winnings uint
 }
 
-func New(current map[string]uint, salt []byte, crypto crypto.Crypto) *Game {
+func New(current map[string]uint64, salt []byte, crypto crypto.Crypto) *Game {
 	// TODO: load winnings from file in io, add implementations for RNG &weight, tests for this package
 	g := &Game{
 		winnings: map[string]*Play{},
@@ -31,18 +32,19 @@ func New(current map[string]uint, salt []byte, crypto crypto.Crypto) *Game {
 	for k, v := range current {
 		g.winnings[k] = &Play{
 			Mutex:    sync.Mutex{},
-			winnings: v,
+			winnings: uint(v),
 		}
 	}
 	return g
 }
 
-func (g *Game) Play(address, message string) (bool, uint) {
+func (g *Game) Play(address, message string) (bool, uint, error) {
 	p, ok := g.winnings[address]
 	if !ok {
-		return false, 0
+		return false, 0, errors.Errorf("Could not find eth address %s, does it have xx coins?", address)
 	}
-	return p.play(message, g.crypto, g.salt)
+	new, value := p.play(message, g.crypto, g.salt)
+	return new, value, nil
 }
 
 func (p *Play) play(message string, crypto crypto.Crypto, salt []byte) (bool, uint) {
