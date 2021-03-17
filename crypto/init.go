@@ -32,6 +32,6 @@ func InitCrypto() {
 		jww.FATAL.Panicf(err.Error())
 	}
 
-	jww.INFO.Print("Pre-committed output with message \"test\": %d", Weight(RandomGeneration("test", salt)))
+	jww.INFO.Printf("Pre-committed output with message \"test\": %v", Weight(RandomGeneration("test", salt)))
 
 }
