@@ -1,0 +1,72 @@
+# From: https://about.gitlab.com/2017/09/21/how-to-create-ci-cd-pipeline-with-autodeploy-to-kubernetes-using-gitlab-and-helm/
+
+variables:
+  REPO_DIR: gitlab.com/elixxir
+  REPO_NAME: xx-coin-game
+  DOCKER_IMAGE: elixxirlabs/cuda-go:go1.13-cuda11.1
+  MIN_CODE_COVERAGE: "20.0"
+
+before_script:
+  - go version || echo "Go executable not found."
+  - echo $CI_BUILD_REF
+  - echo $CI_PROJECT_DIR
+  - echo $HOME
+  - echo $PWD
+
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - ssh-keyscan -t rsa gitlab.com > ~/.ssh/known_hosts
+  - git config --global url."git@gitlab.com:".insteadOf "https://gitlab.com/"
+  - export PATH=$HOME/go/bin:$PATH
+  - export GOPRIVATE="*gitlab.com/xx_network/*"
+  #- go env -w GOPROXY=direct
+  # Clear out old locally-cached tags
+  - git tag -l | xargs git tag -d
+  - git fetch --tags
+  # Uncomment below to set GOPATH to where it is downloaded
+  - go env -w GOPATH=$PWD/.go
+  - go env
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: $DOCKER_IMAGE
+  script:
+    - git clean -ffdx
+    - go mod vendor -v
+    - go build ./...
+    - go mod tidy
+    - mkdir -p testdata
+
+    # Test coverage
+    #- go-acc --covermode atomic --output testdata/coverage.out ./... -- -v
+    - go-acc --covermode atomic --output testdata/coverage-real.out ./... -- -v
+    # Exclude some specific packages and files
+    #- cat testdata/coverage.out | grep -v cmd | grep -v mockserver | grep -v pb[.]go | grep -v main.go > testdata/coverage-real.out
+    #- go tool cover -func=testdata/coverage-real.out
+    #- go tool cover -html=testdata/coverage-real.out -o testdata/coverage.html
+
+    # Test Coverage Check
+    - go tool cover -func=testdata/coverage-real.out | grep "total:" | awk '{print $3}' | sed 's/\%//g' > testdata/coverage-percentage.txt
+    - export CODE_CHECK=$(echo "$(cat testdata/coverage-percentage.txt) >= $MIN_CODE_COVERAGE" | bc -l)
+    - (if [ "$CODE_CHECK" == "1" ]; then echo "Minimum coverage of $MIN_CODE_COVERAGE succeeded"; else echo "Minimum coverage of $MIN_CODE_COVERAGE failed"; exit 1; fi);
+
+    # Build binaries
+    - mkdir -p release
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' -o release/client.linux64 main.go
+    - GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' -o release/client.win64 main.go
+    - GOOS=windows GOARCH=386 CGO_ENABLED=0 go build -ldflags '-w -s' -o release/client.win32 main.go
+    - GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' -o release/client.darwin64 main.go
+    - /upload-artifacts.sh release/
+  artifacts:
+    paths:
+      - vendor/
+      - testdata/
+      - release/
+  except:
+
