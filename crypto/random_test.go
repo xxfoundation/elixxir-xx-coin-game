@@ -19,16 +19,16 @@ func TestRandomGeneration(t *testing.T) {
 	digest := RandomGeneration("test", salt)
 
 	if len(digest) != 32 {
-		t.Errorf("RandomGeneration did not output a digest against the spec." +
-			"\n\tExpected length: %v" +
+		t.Errorf("RandomGeneration did not output a digest against the spec."+
+			"\n\tExpected length: %v"+
 			"\n\tReceived Lenth: %v", 32, len(digest))
 	}
 	winnings := Weight(digest)
 
-	t.Logf("resultLookup: %v",resultLookup)
+	t.Logf("resultLookup: %v", resultLookup)
 	t.Logf("Salts: %v", salt)
 	if winnings < 32 || winnings > 1024 {
-		t.Errorf("Winnings out of bound of 32 to 1024." +
+		t.Errorf("Winnings out of bound of 32 to 1024."+
 			"Winning value: %v", winnings)
 	}
 }
