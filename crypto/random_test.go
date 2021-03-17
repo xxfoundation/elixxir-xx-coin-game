@@ -6,6 +6,8 @@
 package crypto
 
 import (
+	jww "github.com/spf13/jwalterweatherman"
+	"gitlab.com/xx_network/crypto/csprng"
 	"os"
 	"testing"
 )
@@ -17,7 +19,17 @@ func TestMain(m *testing.M) {
 
 func TestRandomGeneration(t *testing.T) {
 	rng := NewRng()
-	digest := rng.RandomGeneration("test", Salt)
+
+	salt := make([]byte, 32)
+	_, err := csprng.NewSystemRNG().Read(salt)
+	if err != nil {
+		jww.FATAL.Panicf(err.Error())
+	}
+
+	jww.INFO.Printf("Pre-committed output with message \"test\": %v",
+		rng.Weight(rng.RandomGeneration("test", salt)))
+
+	digest := rng.RandomGeneration("test", salt)
 
 	if len(digest) != 32 {
 		t.Errorf("RandomGeneration did not output a digest against the spec."+
@@ -27,7 +39,7 @@ func TestRandomGeneration(t *testing.T) {
 	winnings := rng.Weight(digest)
 
 	t.Logf("resultLookup: %v", resultLookup)
-	t.Logf("Salt: %v", Salt)
+	t.Logf("Salt: %v", salt)
 	if winnings < 32 || winnings > 1024 {
 		t.Errorf("Winnings out of bound of 32 to 1024."+
 			"Winning value: %v", winnings)

@@ -10,8 +10,8 @@ type Crypto interface {
 	Weight(digest []byte) uint
 }
 
-type Rng struct {}
+type Rng struct{}
 
-func NewRng() *Rng  {
+func NewRng() *Rng {
 	return &Rng{}
 }
