@@ -149,10 +149,11 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
+			//play the game
 			new, value, err := gameMap.Play(address, string(payload))
 
 			if err != nil {
-				jww.WARN.Printf("Address %s from %s could nto be found: %s",
+				jww.WARN.Printf("Address %s from %s could not be found: %s",
 					address, c.GetPartner(), err.Error())
 				err = singleMng.RespondSingleUse(c, []byte(err.Error()), 30*time.Second)
 				if err != nil {
