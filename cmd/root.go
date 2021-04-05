@@ -24,8 +24,11 @@ import (
 	"gitlab.com/elixxir/xx-coin-game/io"
 	"io/ioutil"
 	"os"
+	"sync/atomic"
 	"time"
 )
+
+const maxPlays = uint64(500)
 
 var (
 	logPath     string
@@ -36,7 +39,10 @@ var (
 	password    string
 	ndfPath     string
 	salt        []byte
+	ended		bool
 )
+
+var numPlays *uint64
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -48,6 +54,15 @@ var rootCmd = &cobra.Command{
 
 		// Main program initialization here
 		addressMap, addressWriteCh := io.StartIo(filePath)
+
+		//count the number of plays
+		np := uint64(0)
+		for _, coins := range addressMap{
+			if coins !=0{
+				np++
+			}
+		}
+		numPlays = &np
 
 		gameMap := game.New(addressMap, salt, crypto.NewRng())
 
@@ -99,6 +114,25 @@ var rootCmd = &cobra.Command{
 			if payload == nil {
 				jww.WARN.Printf("Empty payload from %s",
 					c.GetPartner())
+				err := singleMng.RespondSingleUse(c, []byte("Cannot play with " +
+					"an empty payload"), 30*time.Second)
+				if err != nil {
+					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
+						c.GetPartner(), err)
+				}
+					return
+			}
+
+			plays := atomic.AddUint64(numPlays, 1)
+
+			if plays > maxPlays || ended{
+				err := singleMng.RespondSingleUse(c, []byte("Sorry, but the " +
+					"game is over. Stay tuned, there will be more chances to " +
+					"play!"), 30*time.Second)
+				if err != nil {
+					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
+						c.GetPartner(), err)
+				}
 				return
 			}
 
@@ -112,21 +146,26 @@ var rootCmd = &cobra.Command{
 					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
 						c.GetPartner(), err)
 				}
+				return
 			}
 
+			//play the game
 			new, value, err := gameMap.Play(address, string(payload))
 
 			if err != nil {
-				jww.WARN.Printf("Address %s from %s could nto be found: %s",
+				jww.WARN.Printf("Address %s from %s could not be found: %s",
 					address, c.GetPartner(), err.Error())
 				err = singleMng.RespondSingleUse(c, []byte(err.Error()), 30*time.Second)
 				if err != nil {
 					jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
 						c.GetPartner(), err)
 				}
+				return
 			}
 
-			message := fmt.Sprintf("Address %s said \"%s\" and won %d xx coins!", address, text, value)
+			message := fmt.Sprintf("Address %s said \"%s\", as a thank " +
+				"you for joining the celebration you got %d xx coins!",
+				address, text, value)
 
 			if new {
 				addressWriteCh <- io.AddressUpdate{
@@ -141,7 +180,10 @@ var rootCmd = &cobra.Command{
 				jww.WARN.Printf("Failed to transmit resonce to %s: %+v",
 					c.GetPartner(), err)
 			}
+			return
 		}
+
+
 		singleMng.RegisterCallback("xxCoinGame", callback)
 		client.AddService(singleMng.StartProcesses)
 
@@ -196,7 +238,11 @@ func init() {
 	rootCmd.Flags().StringVarP(&ndfPath, "ndf", "n", "ndf.json",
 		"Path to the network definition JSON file")
 
-	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte, 32), "Default value of salt")
+	rootCmd.Flags().BytesHexVar(&salt, "salt", make([]byte, 32),
+		"Random number generation salt")
+
+	rootCmd.Flags().BoolVar(&ended, "ended", false,
+		"Sets the game as over and does not allow plays")
 }
 
 // initLog initializes logging thresholds and the log path.
