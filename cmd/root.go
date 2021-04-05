@@ -123,7 +123,7 @@ var rootCmd = &cobra.Command{
 					return
 			}
 
-			plays := atomic.AddUint64(numPlays, 1)
+			plays := atomic.LoadUint64(numPlays)
 
 			if plays > maxPlays || ended{
 				err := singleMng.RespondSingleUse(c, []byte("Sorry, but the " +
@@ -168,6 +168,7 @@ var rootCmd = &cobra.Command{
 				address, text, value)
 
 			if new {
+				atomic.AddUint64(numPlays, 1)
 				addressWriteCh <- io.AddressUpdate{
 					Address: address,
 					Value:   uint64(value),
