@@ -7,7 +7,7 @@ package game
 
 import (
 	"github.com/pkg/errors"
-	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"git.xx.network/elixxir/xx-coin-game/crypto"
 	"sync"
 )
 

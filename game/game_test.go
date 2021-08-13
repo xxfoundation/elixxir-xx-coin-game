@@ -1,7 +1,7 @@
 package game
 
 import (
-	"gitlab.com/elixxir/xx-coin-game/crypto"
+	"git.xx.network/elixxir/xx-coin-game/crypto"
 	"testing"
 )
 

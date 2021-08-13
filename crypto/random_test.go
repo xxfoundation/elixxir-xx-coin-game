@@ -7,7 +7,7 @@ package crypto
 
 import (
 	jww "github.com/spf13/jwalterweatherman"
-	"gitlab.com/xx_network/crypto/csprng"
+	"git.xx.network/xx_network/crypto/csprng"
 	"testing"
 )
 

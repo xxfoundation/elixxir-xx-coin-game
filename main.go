@@ -6,7 +6,7 @@
 
 package main
 
-import "gitlab.com/elixxir/xx-coin-game/cmd"
+import "git.xx.network/elixxir/xx-coin-game/cmd"
 
 func main() {
 	cmd.Execute()
